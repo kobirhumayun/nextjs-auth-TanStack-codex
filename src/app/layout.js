@@ -17,7 +17,6 @@ export const metadata = {
   description: "App home page",
 };
 
-import { Header } from "@/components/Header";
 import Providers from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -28,7 +27,6 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <Providers>
-          <Header />
           {children}
           <Toaster />
         </Providers>
