@@ -1,0 +1,130 @@
+// File: src/components/features/projects/project-list.js
+"use client";
+
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
+// Sidebar list rendering all projects with search and sorting controls.
+export default function ProjectList({
+  projects = [],
+  isLoading,
+  selectedProjectId,
+  onSelect,
+  onAddProject,
+  onEditProject,
+  onDeleteProject,
+}) {
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("newest");
+
+  const filteredProjects = useMemo(() => {
+    const normalizedSearch = search.toLowerCase();
+    const result = projects
+      .filter((project) => project.name.toLowerCase().includes(normalizedSearch))
+      .sort((a, b) => {
+        if (sort === "newest") return new Date(b.createdAt) - new Date(a.createdAt);
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      });
+    return result;
+  }, [projects, search, sort]);
+
+  return (
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Projects</h2>
+          <p className="text-xs text-muted-foreground">Select a project to view its transactions.</p>
+        </div>
+        <Button onClick={onAddProject} size="sm" className="hidden md:inline-flex">
+          Add New Project
+        </Button>
+      </div>
+      <div className="grid gap-3">
+        <div className="grid gap-2">
+          <Label htmlFor="project-search" className="text-xs uppercase tracking-wide text-muted-foreground">
+            Search projects
+          </Label>
+          <Input
+            id="project-search"
+            placeholder="Search by name"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Sort by</Label>
+          <Select value={sort} onValueChange={setSort}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sort projects" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="oldest">Oldest</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto pr-2">
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-20 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        ) : filteredProjects.length ? (
+          filteredProjects.map((project) => {
+            const isActive = selectedProjectId === project.id;
+            return (
+              <button
+                key={project.id}
+                onClick={() => onSelect?.(project)}
+                className={cn(
+                  "w-full rounded-lg border p-4 text-left transition hover:border-primary",
+                  isActive ? "border-primary bg-primary/5" : "border-transparent bg-muted/40"
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{project.name}</p>
+                    <p className="text-xs text-muted-foreground">{project.description}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{project.createdAt}</span>
+                </div>
+                {isActive && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onEditProject?.(project); }}>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDeleteProject?.(project);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )}
+              </button>
+            );
+          })
+        ) : (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            No projects created yet. Click “Add New Project” to start.
+          </div>
+        )}
+      </div>
+      <div className="sticky bottom-4 md:hidden">
+        <Button className="h-12 w-full" size="lg" onClick={onAddProject}>
+          Add New Project
+        </Button>
+      </div>
+    </div>
+  );
+}
