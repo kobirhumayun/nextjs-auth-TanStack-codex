@@ -14,7 +14,8 @@ const nextConfig = {
   experimental: {
     turbo: {
       resolveAlias: {
-        recharts: path.resolve(process.cwd(), "src/lib/recharts-stub.js"),
+        // Use a relative module path so Turbopack works across POSIX and Windows hosts.
+        recharts: "./src/lib/recharts-stub.js",
       },
     },
   },
