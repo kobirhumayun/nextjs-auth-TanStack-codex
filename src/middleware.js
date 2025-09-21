@@ -1,6 +1,6 @@
 // File: src/middleware.js
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { jwtDecode } from "jwt-decode";
 
 const PUBLIC_ROUTES = ["/", "/login", "/register", "/pricing", "/request-password-reset", "/reset-password"];
 const USER_DASHBOARD_ROUTE = "/dashboard";
@@ -20,14 +20,55 @@ function isFreePlan(session) {
   return typeof plan === "string" && plan.toLowerCase().includes("free");
 }
 
-export async function middleware(request) {
+const SESSION_COOKIE_NAMES = [
+  "authjs.session-token",
+  "__Secure-authjs.session-token",
+  "next-auth.session-token",
+  "__Secure-next-auth.session-token",
+];
+
+function readTokenFromCookies(request) {
+  for (const name of SESSION_COOKIE_NAMES) {
+    const value = request.cookies.get(name)?.value;
+    if (value) return value;
+  }
+  return null;
+}
+
+function deriveSession(request) {
+  const token = readTokenFromCookies(request);
+  if (!token) return null;
+  let payload;
+  try {
+    payload = jwtDecode(token);
+  } catch {
+    return null;
+  }
+
+  const rawUser = typeof payload?.user === "object" && payload.user ? payload.user : {};
+  const user = {
+    ...rawUser,
+    id: payload?.id ?? payload?.sub ?? rawUser?.id ?? null,
+    role: payload?.role ?? rawUser?.role ?? null,
+  };
+
+  if (payload?.plan && !user.plan) user.plan = payload.plan;
+  if (payload?.planSlug && !user.planSlug) user.planSlug = payload.planSlug;
+  if (typeof user.planSlug !== "string" && typeof user.plan === "string") {
+    user.planSlug = user.plan;
+  }
+
+  return { user };
+}
+
+export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/_next') || pathname.startsWith('/static') || pathname.startsWith('/api') || pathname === '/favicon.ico') {
+  if (pathname.startsWith("/_next") || pathname.startsWith("/static") || pathname.startsWith("/api") || pathname === "/favicon.ico") {
     return NextResponse.next();
   }
 
-  const session = await auth();
+  const session = deriveSession(request);
   const isAuthenticated = Boolean(session?.user);
 
   if (isPublicRoute(pathname)) {
