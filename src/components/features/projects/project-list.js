@@ -94,15 +94,31 @@ export default function ProjectList({
                 : "No description available.";
             const createdLabel = project?.createdAt || "—";
             const isActive = selectedProjectId === projectId;
+            const handleSelect = () => {
+              if (projectId) {
+                onSelect?.(project);
+              }
+            };
             return (
-              <button
+              <div
                 key={projectId ?? `project-${index}`}
-                onClick={() => projectId && onSelect?.(project)}
+                role="button"
+                tabIndex={projectId ? 0 : -1}
+                aria-disabled={!projectId}
+                onClick={handleSelect}
+                onKeyDown={(event) => {
+                  if (!projectId) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleSelect();
+                  }
+                }}
                 className={cn(
-                  "w-full rounded-lg border p-4 text-left transition hover:border-primary",
-                  isActive ? "border-primary bg-primary/5" : "border-transparent bg-muted/40"
+                  "w-full rounded-lg border p-4 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  isActive ? "border-primary bg-primary/5" : "border-transparent bg-muted/40",
+                  projectId ? "cursor-pointer" : "cursor-not-allowed opacity-60"
                 )}
-                disabled={!projectId}
+                data-state={isActive ? "active" : "inactive"}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -141,7 +157,7 @@ export default function ProjectList({
                     </Button>
                   </div>
                 )}
-              </button>
+              </div>
             );
           })
         ) : (
