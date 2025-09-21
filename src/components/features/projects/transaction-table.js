@@ -22,19 +22,24 @@ export default function TransactionTable({
   const [sort, setSort] = useState("newest");
 
   const filteredTransactions = useMemo(() => {
-    const normalizedSearch = search.toLowerCase();
-    const result = transactions
-      .filter((transaction) =>
-        [transaction.description, transaction.subcategory]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedSearch)
-      )
+    const normalizedSearch = search.trim().toLowerCase();
+    const getTimestamp = (value) => {
+      if (!value) return 0;
+      const parsed = new Date(value).getTime();
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    return transactions
+      .filter((transaction) => {
+        const description = typeof transaction?.description === "string" ? transaction.description : "";
+        const subcategory = typeof transaction?.subcategory === "string" ? transaction.subcategory : "";
+        return `${description} ${subcategory}`.toLowerCase().includes(normalizedSearch);
+      })
       .sort((a, b) => {
-        if (sort === "newest") return new Date(b.date) - new Date(a.date);
-        return new Date(a.date) - new Date(b.date);
+        const aTime = getTimestamp(a?.date);
+        const bTime = getTimestamp(b?.date);
+        return sort === "newest" ? bTime - aTime : aTime - bTime;
       });
-    return result;
   }, [transactions, search, sort]);
 
   return (
@@ -94,28 +99,48 @@ export default function TransactionTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((transaction) => {
-                const formattedAmount = `${transaction.type === "Expense" ? "-" : "+"}$${transaction.amount.toLocaleString()}`;
+              {filteredTransactions.map((transaction, index) => {
+                const transactionId = transaction?.id ?? `transaction-${index}`;
+                const amountValue = Number.isFinite(Number(transaction?.amount)) ? Number(transaction.amount) : 0;
+                const formattedAmount = `${transaction?.type === "Expense" ? "-" : "+"}$${amountValue.toLocaleString()}`;
+                const transactionType = transaction?.type === "Income" ? "Income" : "Expense";
+                const description =
+                  typeof transaction?.description === "string" && transaction.description.trim().length
+                    ? transaction.description
+                    : "No description provided.";
+                const subcategory =
+                  typeof transaction?.subcategory === "string" && transaction.subcategory.trim().length
+                    ? transaction.subcategory
+                    : "Uncategorized";
+                const dateLabel = transaction?.date || "—";
                 return (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{transaction.date}</TableCell>
+                  <TableRow key={transactionId}>
+                    <TableCell>{dateLabel}</TableCell>
                     <TableCell>
                       <span className={cn(
                         "rounded-full px-2 py-1 text-xs font-semibold",
-                        transaction.type === "Income" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                        transactionType === "Income" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                       )}>
-                        {transaction.type}
+                        {transactionType}
                       </span>
                     </TableCell>
-                    <TableCell>{transaction.description}</TableCell>
-                    <TableCell>{transaction.subcategory}</TableCell>
+                    <TableCell>{description}</TableCell>
+                    <TableCell>{subcategory}</TableCell>
                     <TableCell className="text-right font-medium">{formattedAmount}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => onEditTransaction?.(transaction)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => transaction?.id && onEditTransaction?.(transaction)}
+                        >
                           Edit
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => onDeleteTransaction?.(transaction)}>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => transaction?.id && onDeleteTransaction?.(transaction)}
+                        >
                           Delete
                         </Button>
                       </div>
@@ -140,31 +165,53 @@ export default function TransactionTable({
             ))}
           </div>
         ) : filteredTransactions.length ? (
-          filteredTransactions.map((transaction) => {
-            const formattedAmount = `${transaction.type === "Expense" ? "-" : "+"}$${transaction.amount.toLocaleString()}`;
+          filteredTransactions.map((transaction, index) => {
+            const transactionId = transaction?.id ?? `transaction-${index}`;
+            const amountValue = Number.isFinite(Number(transaction?.amount)) ? Number(transaction.amount) : 0;
+            const formattedAmount = `${transaction?.type === "Expense" ? "-" : "+"}$${amountValue.toLocaleString()}`;
+            const transactionType = transaction?.type === "Income" ? "Income" : "Expense";
+            const description =
+              typeof transaction?.description === "string" && transaction.description.trim().length
+                ? transaction.description
+                : "No description provided.";
+            const subcategory =
+              typeof transaction?.subcategory === "string" && transaction.subcategory.trim().length
+                ? transaction.subcategory
+                : "Uncategorized";
+            const dateLabel = transaction?.date || "—";
             return (
-              <div key={transaction.id} className="rounded-lg border p-4 shadow-sm">
+              <div key={transactionId} className="rounded-lg border p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold">{transaction.description}</p>
-                    <p className="text-xs text-muted-foreground">{transaction.date}</p>
+                    <p className="text-sm font-semibold">{description}</p>
+                    <p className="text-xs text-muted-foreground">{dateLabel}</p>
                   </div>
                   <span className={cn(
                     "rounded-full px-2 py-1 text-xs font-semibold",
-                    transaction.type === "Income" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                    transactionType === "Income" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                   )}>
-                    {transaction.type}
+                    {transactionType}
                   </span>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{transaction.subcategory}</span>
+                  <span className="text-muted-foreground">{subcategory}</span>
                   <span className="font-semibold">{formattedAmount}</span>
                 </div>
                 <div className="mt-4 flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => onEditTransaction?.(transaction)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => transaction?.id && onEditTransaction?.(transaction)}
+                  >
                     Edit
                   </Button>
-                  <Button variant="destructive" size="sm" className="flex-1" onClick={() => onDeleteTransaction?.(transaction)}>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => transaction?.id && onDeleteTransaction?.(transaction)}
+                  >
                     Delete
                   </Button>
                 </div>

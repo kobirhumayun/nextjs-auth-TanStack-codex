@@ -22,14 +22,23 @@ export default function ProjectList({
   const [sort, setSort] = useState("newest");
 
   const filteredProjects = useMemo(() => {
-    const normalizedSearch = search.toLowerCase();
-    const result = projects
-      .filter((project) => project.name.toLowerCase().includes(normalizedSearch))
+    const normalizedSearch = search.trim().toLowerCase();
+    const getTimestamp = (value) => {
+      if (!value) return 0;
+      const parsed = new Date(value).getTime();
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    return projects
+      .filter((project) => {
+        const name = typeof project?.name === "string" ? project.name : "";
+        return name.toLowerCase().includes(normalizedSearch);
+      })
       .sort((a, b) => {
-        if (sort === "newest") return new Date(b.createdAt) - new Date(a.createdAt);
-        return new Date(a.createdAt) - new Date(b.createdAt);
+        const aTime = getTimestamp(a?.createdAt);
+        const bTime = getTimestamp(b?.createdAt);
+        return sort === "newest" ? bTime - aTime : aTime - bTime;
       });
-    return result;
   }, [projects, search, sort]);
 
   return (
@@ -76,27 +85,45 @@ export default function ProjectList({
             ))}
           </div>
         ) : filteredProjects.length ? (
-          filteredProjects.map((project) => {
-            const isActive = selectedProjectId === project.id;
+          filteredProjects.map((project, index) => {
+            const projectId = project?.id;
+            const projectName = typeof project?.name === "string" && project.name.trim().length ? project.name : "Untitled project";
+            const projectDescription =
+              typeof project?.description === "string" && project.description.trim().length
+                ? project.description
+                : "No description available.";
+            const createdLabel = project?.createdAt || "—";
+            const isActive = selectedProjectId === projectId;
             return (
               <button
-                key={project.id}
-                onClick={() => onSelect?.(project)}
+                key={projectId ?? `project-${index}`}
+                onClick={() => projectId && onSelect?.(project)}
                 className={cn(
                   "w-full rounded-lg border p-4 text-left transition hover:border-primary",
                   isActive ? "border-primary bg-primary/5" : "border-transparent bg-muted/40"
                 )}
+                disabled={!projectId}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold">{project.name}</p>
-                    <p className="text-xs text-muted-foreground">{project.description}</p>
+                    <p className="font-semibold">{projectName}</p>
+                    <p className="text-xs text-muted-foreground">{projectDescription}</p>
                   </div>
-                  <span className="text-xs text-muted-foreground">{project.createdAt}</span>
+                  <span className="text-xs text-muted-foreground">{createdLabel}</span>
                 </div>
                 {isActive && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onEditProject?.(project); }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (projectId) {
+                          onEditProject?.(project);
+                        }
+                      }}
+                      disabled={!projectId}
+                    >
                       Edit
                     </Button>
                     <Button
@@ -104,8 +131,11 @@ export default function ProjectList({
                       size="sm"
                       onClick={(event) => {
                         event.stopPropagation();
-                        onDeleteProject?.(project);
+                        if (projectId) {
+                          onDeleteProject?.(project);
+                        }
                       }}
+                      disabled={!projectId}
                     >
                       Delete
                     </Button>

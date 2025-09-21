@@ -21,20 +21,33 @@ export default function ProjectsPage() {
     queryFn: fetchProjects,
   });
 
-  const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [projectDialogState, setProjectDialogState] = useState({ open: false, project: null });
   const [transactionDialogState, setTransactionDialogState] = useState({ open: false, transaction: null });
 
+  const projects = useMemo(() => projectsData ?? [], [projectsData]);
+
   useEffect(() => {
-    setProjects(projectsData);
-    if (!selectedProjectId && projectsData.length) {
-      setSelectedProjectId(projectsData[0].id);
+    if (!projects.length) {
+      if (selectedProjectId !== null) {
+        setSelectedProjectId(null);
+      }
+      return;
     }
-  }, [projectsData, selectedProjectId]);
+
+    if (!selectedProjectId) {
+      setSelectedProjectId(projects[0]?.id ?? null);
+      return;
+    }
+
+    const hasSelectedProject = projects.some((project) => project?.id === selectedProjectId);
+    if (!hasSelectedProject) {
+      setSelectedProjectId(projects[0]?.id ?? null);
+    }
+  }, [projects, selectedProjectId]);
 
   const selectedProject = useMemo(
-    () => projects.find((project) => project.id === selectedProjectId) || null,
+    () => projects.find((project) => project?.id === selectedProjectId) || null,
     [projects, selectedProjectId]
   );
 
@@ -46,19 +59,18 @@ export default function ProjectsPage() {
 
   const handleProjectSubmit = async (values) => {
     const editingProject = projectDialogState.project;
+    const currentProjects = queryClient.getQueryData(qk.projects.list()) || [];
+
     if (editingProject) {
       const updatedProject = {
         ...editingProject,
         name: values.name,
         description: values.description,
       };
-      setProjects((prev) => prev.map((project) => (project.id === updatedProject.id ? updatedProject : project)));
-      queryClient.setQueryData(qk.projects.list(), (prev = []) =>
-        prev.map((project) => (project.id === updatedProject.id ? updatedProject : project))
+      queryClient.setQueryData(
+        qk.projects.list(),
+        currentProjects.map((project) => (project.id === updatedProject.id ? updatedProject : project))
       );
-      if (selectedProjectId === editingProject.id) {
-        setSelectedProjectId(updatedProject.id);
-      }
       return;
     }
 
@@ -68,20 +80,17 @@ export default function ProjectsPage() {
       description: values.description,
       createdAt: new Date().toISOString().slice(0, 10),
     };
-    setProjects((prev) => [newProject, ...prev]);
+    queryClient.setQueryData(qk.projects.list(), [newProject, ...currentProjects]);
     setSelectedProjectId(newProject.id);
-    queryClient.setQueryData(qk.projects.list(), (prev = []) => [newProject, ...(prev || [])]);
   };
 
   const handleDeleteProject = (project) => {
-    setProjects((prev) => {
-      const next = prev.filter((item) => item.id !== project.id);
-      if (selectedProjectId === project.id) {
-        setSelectedProjectId(next[0]?.id || null);
-      }
-      return next;
-    });
-    queryClient.setQueryData(qk.projects.list(), (prev = []) => prev.filter((item) => item.id !== project.id));
+    const currentProjects = queryClient.getQueryData(qk.projects.list()) || [];
+    const nextProjects = currentProjects.filter((item) => item.id !== project.id);
+    queryClient.setQueryData(qk.projects.list(), nextProjects);
+    if (selectedProjectId === project.id) {
+      setSelectedProjectId(nextProjects[0]?.id || null);
+    }
     queryClient.removeQueries({ queryKey: qk.projects.detail(project.id) });
     toast.success(`Project "${project.name}" removed.`);
   };
@@ -114,6 +123,7 @@ export default function ProjectsPage() {
   };
 
   const handleDeleteTransaction = (transaction) => {
+    if (!selectedProjectId) return;
     queryClient.setQueryData(qk.projects.detail(selectedProjectId), (prev = []) =>
       prev.filter((item) => item.id !== transaction.id)
     );
