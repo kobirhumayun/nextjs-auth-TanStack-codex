@@ -1,3 +1,2 @@
-export const runtime = "nodejs";
-export const revalidate = 0;
+// File: src/app/api/auth/[...nextauth]/route.js
 export { GET, POST } from "@/auth";

@@ -1,15 +1,11 @@
-﻿// app/get-query-client.js
-import {
-  isServer,
-  QueryClient,
-  defaultShouldDehydrateQuery,
-} from "@tanstack/react-query";
+// File: src/app/get-query-client.js
+import { isServer, QueryClient, defaultShouldDehydrateQuery } from "@tanstack/react-query";
 
+// Factory that creates a configured QueryClient instance for SSR/CSR parity.
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Good defaults for SSR + SWR
         staleTime: 60_000,
         gcTime: 5 * 60_000,
         refetchOnWindowFocus: true,
@@ -17,12 +13,9 @@ function makeQueryClient() {
         retry: (fails, err) => (err?.status === 401 ? false : fails < 2),
         retryDelay: (n) => Math.min(1000 * 2 ** n, 5000),
       },
-      // 👇 Include *pending* queries in dehydration so Next can stream them
       dehydrate: {
         shouldDehydrateQuery: (query) =>
-          defaultShouldDehydrateQuery(query) ||
-          query.state.status === "pending",
-        // Let Next.js handle error redaction
+          defaultShouldDehydrateQuery(query) || query.state.status === "pending",
         shouldRedactErrors: () => false,
       },
     },
@@ -30,6 +23,8 @@ function makeQueryClient() {
 }
 
 let browserQueryClient;
+
+// Reuse the same client on the browser to preserve cache between renders.
 export function getQueryClient() {
   if (isServer) return makeQueryClient();
   if (!browserQueryClient) browserQueryClient = makeQueryClient();
