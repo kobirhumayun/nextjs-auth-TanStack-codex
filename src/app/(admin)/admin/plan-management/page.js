@@ -97,11 +97,12 @@ export default function PlanManagementPage() {
     onMutate: async (updatedPlan) => {
       await queryClient.cancelQueries({ queryKey: qk.admin.plans() });
       const previousPlans = queryClient.getQueryData(qk.admin.plans());
+      const { previousSlug, ...planData } = updatedPlan;
+      const slugToMatch = previousSlug ?? planData.slug;
       queryClient.setQueryData(qk.admin.plans(), (current = []) =>
         (current || []).map((plan) => {
-          if (plan.slug !== updatedPlan.targetSlug) return plan;
-          const { targetSlug, ...rest } = updatedPlan;
-          return normalizeAdminPlan({ ...plan, ...rest });
+          if (!slugToMatch || plan.slug !== slugToMatch) return plan;
+          return normalizeAdminPlan({ ...plan, ...planData });
         })
       );
       return { previousPlans };
@@ -151,7 +152,7 @@ export default function PlanManagementPage() {
 
   const openEdit = (plan) => {
     setEditingPlan({
-      targetSlug: plan.slug,
+      previousSlug: plan.slug,
       defaults: {
         name: plan.name ?? "",
         slug: plan.slug ?? "",
@@ -173,7 +174,7 @@ export default function PlanManagementPage() {
   const handleSubmit = (values) => {
     if (editingPlan) {
       updatePlanMutation.mutate({
-        targetSlug: editingPlan.targetSlug,
+        previousSlug: editingPlan.previousSlug,
         ...values,
       });
     } else {

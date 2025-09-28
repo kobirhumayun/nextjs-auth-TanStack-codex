@@ -68,7 +68,7 @@ export const createAdminPlan = (payload) =>
     body: payload,
   });
 
-export const updateAdminPlan = (payload) =>
+export const updateAdminPlan = ({ previousSlug, ...payload }) =>
   apiJSON(PLAN_ENDPOINT, {
     method: "PUT",
     body: payload,
