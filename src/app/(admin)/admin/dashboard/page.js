@@ -5,12 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import PageHeader from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fetchAdminPlans, fetchAdminPayments, fetchAdminUsers } from "@/lib/mock-data";
+import { fetchAdminPayments, fetchAdminUsers } from "@/lib/mock-data";
 import { qk } from "@/lib/query-keys";
+import { adminPlansOptions } from "@/lib/queries/admin-plans";
 
 // Admin dashboard summarizing platform-wide stats.
 export default function AdminDashboardPage() {
-  const { data: plans = [] } = useQuery({ queryKey: qk.admin.plans(), queryFn: fetchAdminPlans });
+  const { data: plans = [] } = useQuery(adminPlansOptions());
   const { data: payments = [] } = useQuery({ queryKey: qk.admin.payments(), queryFn: fetchAdminPayments });
   const { data: users = [] } = useQuery({ queryKey: qk.admin.users(), queryFn: fetchAdminUsers });
 
