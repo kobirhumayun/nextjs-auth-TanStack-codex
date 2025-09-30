@@ -1,12 +1,41 @@
 // File: src/app/(public)/pricing/page.js
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchPlans } from "@/lib/mock-data";
+import PlanSelection from "@/components/features/pricing/plan-selection";
+import { fetchPublicPlans } from "@/lib/plans";
 
-// Pricing page displaying subscription tiers.
+function normalizePlan(plan) {
+  if (!plan) return null;
+  const fallbackId = plan.name?.toLowerCase().replace(/\s+/g, "-") || `plan-${Math.random().toString(36).slice(2)}`;
+  const id = plan._id ?? plan.id ?? plan.slug ?? fallbackId;
+  return {
+    id,
+    planId: plan._id ?? plan.id ?? plan.slug ?? fallbackId,
+    name: plan.name ?? "Untitled plan",
+    description: plan.description ?? "",
+    price: typeof plan.price === "number" ? plan.price : Number(plan.price ?? 0),
+    billingCycle: plan.billingCycle ?? "",
+    currency: plan.currency ?? "",
+    features: Array.isArray(plan.features) ? plan.features : [],
+    slug: plan.slug ?? null,
+    isPublic: Boolean(plan.isPublic ?? true),
+    displayOrder: plan.displayOrder ?? 0,
+    raw: plan,
+  };
+}
+
 export default async function PricingPage() {
-  const plans = await fetchPlans();
+  let plans = [];
+
+  try {
+    const data = await fetchPublicPlans();
+    plans = Array.isArray(data)
+      ? data
+          .map(normalizePlan)
+          .filter(Boolean)
+          .sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name))
+      : [];
+  } catch (error) {
+    console.error("Failed to load public plans", error);
+  }
 
   return (
     <div className="space-y-12">
@@ -16,33 +45,7 @@ export default async function PricingPage() {
           Flexible pricing for individuals, teams, and enterprises looking to master their finances.
         </p>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {plans.map((plan) => (
-          <Card key={plan.id} className="relative flex h-full flex-col">
-            {plan.name === "Professional" && <Badge className="absolute right-4 top-4">Popular</Badge>}
-            <CardHeader>
-              <CardTitle>{plan.name}</CardTitle>
-              <CardDescription>{plan.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-3xl font-semibold">{plan.price}</p>
-                <p className="text-sm text-muted-foreground">{plan.billingCycle}</p>
-              </div>
-              <ul className="space-y-2 text-sm">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" /> {feature}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter className="mt-auto">
-              <Button className="w-full">Choose Plan</Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+      <PlanSelection plans={plans} />
     </div>
   );
 }
