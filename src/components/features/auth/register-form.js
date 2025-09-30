@@ -39,7 +39,7 @@ export default function RegisterForm() {
   const onSubmit = async (values) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000"}/api/users/register`, {
+      const response = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: values.username, email: values.email, password: values.password }),
