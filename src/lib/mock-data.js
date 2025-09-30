@@ -203,19 +203,6 @@ export async function fetchPlans() {
   return plans;
 }
 
-export async function fetchUserPlan() {
-  await delay();
-  return {
-    currentPlan: plans[2],
-    renewalDate: "2025-02-01",
-    usage: {
-      projects: { used: 8, limit: "Unlimited" },
-      automations: { used: 12, limit: 20 },
-      collaborators: { used: 18, limit: 25 },
-    },
-  };
-}
-
 export async function fetchSummaryTable() {
   await delay();
   return recentTransactions.map((transaction) => ({
