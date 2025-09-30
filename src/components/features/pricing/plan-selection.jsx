@@ -2,6 +2,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -98,6 +100,9 @@ const defaultManualValues = {
 const POPULAR_PLAN_SLUGS = new Set(["professional", "pro", "business"]);
 
 export default function PlanSelection({ plans }) {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const isAuthenticated = Boolean(session?.user);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [flowStep, setFlowStep] = useState("payment-mode");
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -128,14 +133,23 @@ export default function PlanSelection({ plans }) {
     manualPaymentForm.reset(defaultManualValues);
   }, [orderForm, manualPaymentForm]);
 
-  const handlePlanSelection = (plan) => {
-    setSelectedPlan(plan);
-    setOrderResponse(null);
-    setManualPaymentResponse(null);
-    setOrderPayload(null);
-    setFlowStep("payment-mode");
-    setDialogOpen(true);
-  };
+  const handlePlanSelection = useCallback(
+    (plan) => {
+      if (!isAuthenticated) {
+        const callbackUrl = typeof window !== "undefined" ? window.location.href : "/pricing";
+        router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+        return;
+      }
+
+      setSelectedPlan(plan);
+      setOrderResponse(null);
+      setManualPaymentResponse(null);
+      setOrderPayload(null);
+      setFlowStep("payment-mode");
+      setDialogOpen(true);
+    },
+    [isAuthenticated, router]
+  );
 
   const handleDialogChange = (open) => {
     if (!open) {
