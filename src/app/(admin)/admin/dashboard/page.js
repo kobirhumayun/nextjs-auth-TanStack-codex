@@ -5,17 +5,55 @@ import { useQuery } from "@tanstack/react-query";
 import PageHeader from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fetchAdminPayments, fetchAdminUsers } from "@/lib/mock-data";
+import { fetchAdminUsers } from "@/lib/mock-data";
 import { qk } from "@/lib/query-keys";
 import { adminPlansOptions } from "@/lib/queries/admin-plans";
+import { adminPaymentsOptions } from "@/lib/queries/admin-payments";
+
+const formatCurrency = (amount, currency) => {
+  if (amount == null) return "—";
+  const numericAmount = typeof amount === "number" ? amount : Number(amount);
+  if (!Number.isFinite(numericAmount)) {
+    return currency ? `${amount} ${currency}` : String(amount);
+  }
+  const safeCurrency = currency || "USD";
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency: safeCurrency }).format(numericAmount);
+  } catch {
+    return currency ? `${numericAmount} ${currency}` : String(numericAmount);
+  }
+};
+
+const formatDateTime = (value) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  try {
+    return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  } catch {
+    return date.toLocaleString();
+  }
+};
+
+const formatStatus = (status, fallback) => {
+  if (!status) return fallback;
+  return status
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+};
 
 // Admin dashboard summarizing platform-wide stats.
 export default function AdminDashboardPage() {
   const { data: plans = [] } = useQuery(adminPlansOptions());
-  const { data: payments = [] } = useQuery({ queryKey: qk.admin.payments(), queryFn: fetchAdminPayments });
+  const { data: pendingPaymentsData } = useQuery(adminPaymentsOptions({ status: "pending" }));
+  const { data: recentPaymentsData } = useQuery(adminPaymentsOptions());
   const { data: users = [] } = useQuery({ queryKey: qk.admin.users(), queryFn: fetchAdminUsers });
 
-  const pendingPayments = payments.filter((payment) => payment.status === "Pending");
+  const pendingPayments = pendingPaymentsData?.items ?? [];
+  const pendingPaymentsCount = pendingPaymentsData?.pagination?.totalItems ?? pendingPayments.length;
+  const recentPayments = recentPaymentsData?.items ?? [];
 
   return (
     <div className="space-y-8">
@@ -47,7 +85,7 @@ export default function AdminDashboardPage() {
             <CardTitle>Pending Payments</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{pendingPayments.length}</p>
+            <p className="text-3xl font-semibold">{pendingPaymentsCount}</p>
             <p className="text-sm text-muted-foreground">Require manual approval</p>
           </CardContent>
         </Card>
@@ -77,17 +115,22 @@ export default function AdminDashboardPage() {
                   <TableHead>Submitted</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {payments.map((payment) => (
+                <TableBody>
+                {recentPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell>{payment.id}</TableCell>
-                    <TableCell>{payment.user}</TableCell>
-                    <TableCell>${payment.amount}</TableCell>
-                    <TableCell>{payment.status}</TableCell>
-                    <TableCell>{payment.submittedAt}</TableCell>
+                    <TableCell>{payment.reference}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{payment.userName || "Unknown user"}</div>
+                      {payment.userEmail ? (
+                        <div className="text-xs text-muted-foreground">{payment.userEmail}</div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>{formatCurrency(payment.amount, payment.currency)}</TableCell>
+                    <TableCell>{payment.statusLabel || formatStatus(payment.status, "Unknown")}</TableCell>
+                    <TableCell>{formatDateTime(payment.submittedAt)}</TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
+                </TableBody>
             </Table>
           </div>
         </CardContent>
