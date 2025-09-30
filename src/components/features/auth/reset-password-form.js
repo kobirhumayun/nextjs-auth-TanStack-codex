@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const backendBaseUrl = (process.env.AUTH_BACKEND_URL || "http://localhost:4000").replace(/\/$/, "");
+const backendBaseUrl = process.env.AUTH_BACKEND_URL?.replace(/\/$/, "") ?? "http://localhost:4000";
 
 const resetSchema = z
   .object({
