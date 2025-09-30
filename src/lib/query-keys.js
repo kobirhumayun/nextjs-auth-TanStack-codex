@@ -27,7 +27,24 @@ export const qk = {
   },
   admin: {
     plans: () => ["admin", "plans"],
-    payments: () => ["admin", "payments"],
+    payments: (filters) => {
+      if (!filters || (typeof filters === "object" && Object.keys(filters).length === 0)) {
+        return ["admin", "payments"];
+      }
+      if (typeof filters === "string") {
+        return ["admin", "payments", filters];
+      }
+      if (typeof filters === "object") {
+        const normalized = Object.keys(filters)
+          .sort()
+          .reduce((acc, key) => {
+            acc[key] = filters[key];
+            return acc;
+          }, {});
+        return ["admin", "payments", normalized];
+      }
+      return ["admin", "payments", filters];
+    },
     users: () => ["admin", "users"],
     userProfile: (id) => ["admin", "users", String(id)],
   },
