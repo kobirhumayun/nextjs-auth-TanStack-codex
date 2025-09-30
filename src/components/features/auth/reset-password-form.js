@@ -1,7 +1,8 @@
 // File: src/components/features/auth/reset-password-form.js
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -14,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const resetSchema = z
   .object({
     email: z.string().email("Enter a valid email"),
-    otp: z.string().min(6, "OTP must be 6 digits"),
+    otp: z.string().regex(/^\d{6}$/u, "OTP must be a 6-digit code"),
     newPassword: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
   })
@@ -26,10 +27,19 @@ const resetSchema = z
 // Form used on the reset password page to submit OTP and new credentials.
 export function ResetPasswordForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const form = useForm({
     resolver: zodResolver(resetSchema),
     defaultValues: { email: "", otp: "", newPassword: "", confirmPassword: "" },
   });
+
+  useEffect(() => {
+    const email = searchParams.get("email");
+    if (email) {
+      form.setValue("email", email);
+    }
+  }, [form, searchParams]);
 
   const onSubmit = async (values) => {
     setIsSubmitting(true);
@@ -40,13 +50,16 @@ export function ResetPasswordForm() {
         body: JSON.stringify({ email: values.email, otp: values.otp, newPassword: values.newPassword }),
       });
 
+      const body = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
         toast.error(body?.message || "Unable to reset password");
         return;
       }
 
-      toast.success("Password updated. You can now sign in with your new password.");
+      toast.success(body?.message || "Password updated. You can now sign in with your new password.");
+      form.reset({ email: "", otp: "", newPassword: "", confirmPassword: "" });
+      router.push("/login");
     } catch (error) {
       toast.error("Network error. Please try again later.");
       console.error(error);
@@ -101,6 +114,7 @@ const requestSchema = z.object({ email: z.string().email("Enter a valid email") 
 // Form used to request a password reset OTP via email.
 export function RequestPasswordResetForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
   const form = useForm({
     resolver: zodResolver(requestSchema),
     defaultValues: { email: "" },
@@ -115,13 +129,16 @@ export function RequestPasswordResetForm() {
         body: JSON.stringify({ email: values.email }),
       });
 
+      const body = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
         toast.error(body?.message || "Unable to send reset email");
         return;
       }
 
-      toast.success("OTP sent to your email. Check your inbox.");
+      toast.success(body?.message || "OTP sent to your email. Check your inbox.");
+      form.reset({ email: values.email });
+      router.push(`/reset-password?email=${encodeURIComponent(values.email)}`);
     } catch (error) {
       toast.error("Network error. Please try again later.");
       console.error(error);
