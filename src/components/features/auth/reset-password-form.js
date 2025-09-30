@@ -12,8 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const backendBaseUrl = (process.env.AUTH_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
-
 const resetSchema = z
   .object({
     email: z.string().email("Enter a valid email"),
@@ -46,7 +44,7 @@ export function ResetPasswordForm() {
   const onSubmit = async (values) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${backendBaseUrl}/api/users/reset-password`, {
+      const response = await fetch("/api/password-reset/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: values.email, otp: values.otp, newPassword: values.newPassword }),
@@ -125,7 +123,7 @@ export function RequestPasswordResetForm() {
   const onSubmit = async (values) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${backendBaseUrl}/api/users/request-password-reset`, {
+      const response = await fetch("/api/password-reset/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: values.email }),
