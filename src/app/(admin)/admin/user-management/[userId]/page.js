@@ -2,11 +2,20 @@
 import PageHeader from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fetchAdminUserProfile } from "@/lib/mock-data";
+import { getAdminUserById } from "@/lib/queries/admin-users";
 
 // Detailed user profile for administrators.
 export default async function AdminUserProfilePage({ params }) {
-  const profile = await fetchAdminUserProfile(params.userId);
+  const { profile: normalizedProfile } = await getAdminUserById(params.userId);
+  const profile =
+    normalizedProfile || {
+      id: params.userId,
+      username: "Unknown user",
+      email: "unknown@example.com",
+      plan: "Unknown",
+      status: "Unknown",
+      registeredAt: "—",
+    };
 
   return (
     <div className="space-y-8">
