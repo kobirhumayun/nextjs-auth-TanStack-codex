@@ -38,6 +38,12 @@ const SUBSCRIPTION_STATUS_OPTIONS = [
   "free",
 ];
 
+const toSelectValue = (value) => {
+  if (value == null) return undefined;
+  const trimmed = String(value).trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
 const defaultFormValues = {
   username: "",
   email: "",
@@ -53,6 +59,26 @@ const defaultFormValues = {
   isActive: true,
 };
 
+const matchSelectOption = (value, options) => {
+  if (!value) return "";
+  const trimmed = String(value).trim();
+  if (!trimmed) return "";
+  if (!Array.isArray(options) || options.length === 0) return trimmed;
+  const lower = trimmed.toLowerCase();
+  const matched = options.find((option) => option.toLowerCase() === lower);
+  return matched ?? trimmed;
+};
+
+const resolvePlanFieldValue = (profile) => {
+  if (!profile) return "";
+  const slug =
+    typeof profile.planSlug === "string" ? profile.planSlug.trim() : "";
+  if (slug) return slug;
+  const planId =
+    typeof profile.planId === "string" ? profile.planId.trim() : "";
+  return planId;
+};
+
 const mapProfileToForm = (profile) => {
   if (!profile) return defaultFormValues;
   const toDateInput = (value) => {
@@ -65,10 +91,13 @@ const mapProfileToForm = (profile) => {
     email: profile.email ?? "",
     firstName: profile.firstName ?? "",
     lastName: profile.lastName ?? "",
-    role: profile.role ?? "",
-    planId: profile.planId ?? profile.planSlug ?? "",
+    role: matchSelectOption(profile.role, ROLE_OPTIONS),
+    planId: resolvePlanFieldValue(profile),
     profilePictureUrl: profile.profilePictureUrl ?? "",
-    subscriptionStatus: profile.subscriptionStatus ?? "",
+    subscriptionStatus: matchSelectOption(
+      profile.subscriptionStatus,
+      SUBSCRIPTION_STATUS_OPTIONS
+    ),
     subscriptionStartDate: toDateInput(profile.subscriptionStartDate),
     subscriptionEndDate: toDateInput(profile.subscriptionEndDate),
     trialEndsAt: toDateInput(profile.trialEndsAt),
@@ -524,7 +553,7 @@ export default function UserProfileClient({ userId }) {
                     <div className="grid gap-2">
                       <Label htmlFor="role">Role</Label>
                       <Select
-                        value={field.value || NO_ROLE_VALUE}
+                        value={toSelectValue(field.value)}
                         onValueChange={(value) =>
                           field.onChange(value === NO_ROLE_VALUE ? "" : value)
                         }
@@ -553,7 +582,7 @@ export default function UserProfileClient({ userId }) {
                     <div className="grid gap-2">
                       <Label htmlFor="planId">Plan Slug</Label>
                       <Select
-                        value={field.value || NO_PLAN_VALUE}
+                        value={toSelectValue(field.value)}
                         onValueChange={(value) =>
                           field.onChange(value === NO_PLAN_VALUE ? "" : value)
                         }
@@ -586,9 +615,11 @@ export default function UserProfileClient({ userId }) {
                     <div className="grid gap-2">
                       <Label htmlFor="subscriptionStatus">Subscription status</Label>
                       <Select
-                        value={field.value || NO_SUBSCRIPTION_STATUS_VALUE}
+                        value={toSelectValue(field.value)}
                         onValueChange={(value) =>
-                          field.onChange(value === NO_SUBSCRIPTION_STATUS_VALUE ? "" : value)
+                          field.onChange(
+                            value === NO_SUBSCRIPTION_STATUS_VALUE ? "" : value
+                          )
                         }
                         disabled={isSaving}
                       >
