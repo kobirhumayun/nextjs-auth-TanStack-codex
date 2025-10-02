@@ -23,6 +23,7 @@ import {
   mergeAdminUser,
   formatAdminUserStatus,
 } from "@/lib/queries/admin-users";
+import { adminPlansOptions } from "@/lib/queries/admin-plans";
 
 const ROLE_OPTIONS = ["user", "admin", "editor", "support"];
 const NO_ROLE_VALUE = "__no_role__";
@@ -184,6 +185,10 @@ export default function UserProfileClient({ userId }) {
     error,
   } = useQuery(adminUserProfileOptions(userId));
   const { data: listData } = useQuery(adminUsersOptions());
+  const { data: plansData = [] } = useQuery({
+    ...adminPlansOptions(),
+    select: (plans) => (Array.isArray(plans) ? plans : []),
+  });
 
   const form = useForm({ defaultValues: defaultFormValues });
 
@@ -222,15 +227,42 @@ export default function UserProfileClient({ userId }) {
 
   const planSlugOptions = useMemo(() => {
     const set = new Set();
+
+    plansData.forEach((plan) => {
+      if (!plan?.slug || typeof plan.slug !== "string") return;
+      const trimmed = plan.slug.trim();
+      if (!trimmed) return;
+      if (plan.isPublic) {
+        set.add(trimmed);
+      }
+    });
+
     (listData?.items ?? []).forEach((item) => {
       const slug = item?.planSlug || item?.planId;
       const value = typeof slug === "string" ? slug.trim() : "";
       if (value) set.add(value);
     });
-    if (profile?.planSlug) set.add(profile.planSlug);
-    if (profile?.planId) set.add(profile.planId);
-    return Array.from(set).sort();
-  }, [listData?.items, profile?.planId, profile?.planSlug]);
+
+    const profilePlanCandidates = [profile?.planSlug, profile?.planId]
+      .map((candidate) => (typeof candidate === "string" ? candidate.trim() : ""))
+      .filter(Boolean);
+
+    profilePlanCandidates.forEach((candidate) => set.add(candidate));
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [listData?.items, plansData, profile?.planId, profile?.planSlug]);
+
+  const subscriptionStatusOptions = useMemo(() => {
+    const set = new Set(SUBSCRIPTION_STATUS_OPTIONS);
+    const currentStatus =
+      typeof profile?.subscriptionStatus === "string"
+        ? profile.subscriptionStatus.trim()
+        : "";
+    if (currentStatus) {
+      set.add(currentStatus);
+    }
+    return Array.from(set);
+  }, [profile?.subscriptionStatus]);
 
   const errorMessage = isError ? getErrorMessage(error, "Failed to load user profile.") : null;
 
@@ -468,6 +500,7 @@ export default function UserProfileClient({ userId }) {
                 <Controller
                   control={form.control}
                   name="role"
+                  defaultValue={defaultFormValues.role}
                   render={({ field }) => (
                     <div className="grid gap-2">
                       <Label htmlFor="role">Role</Label>
@@ -496,6 +529,7 @@ export default function UserProfileClient({ userId }) {
                 <Controller
                   control={form.control}
                   name="planId"
+                  defaultValue={defaultFormValues.planId}
                   render={({ field }) => (
                     <div className="grid gap-2">
                       <Label htmlFor="planId">Plan Slug</Label>
@@ -528,6 +562,7 @@ export default function UserProfileClient({ userId }) {
                 <Controller
                   control={form.control}
                   name="subscriptionStatus"
+                  defaultValue={defaultFormValues.subscriptionStatus}
                   render={({ field }) => (
                     <div className="grid gap-2">
                       <Label htmlFor="subscriptionStatus">Subscription status</Label>
@@ -543,7 +578,7 @@ export default function UserProfileClient({ userId }) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={NO_SUBSCRIPTION_STATUS_VALUE}>No status</SelectItem>
-                          {SUBSCRIPTION_STATUS_OPTIONS.map((status) => (
+                          {subscriptionStatusOptions.map((status) => (
                             <SelectItem key={status} value={status}>
                               {status}
                             </SelectItem>
