@@ -24,6 +24,16 @@ import {
   formatAdminUserStatus,
 } from "@/lib/queries/admin-users";
 
+const ROLE_OPTIONS = ["user", "admin", "editor", "support"];
+const SUBSCRIPTION_STATUS_OPTIONS = [
+  "active",
+  "trialing",
+  "canceled",
+  "past_due",
+  "pending",
+  "free",
+];
+
 const defaultFormValues = {
   username: "",
   email: "",
@@ -206,6 +216,18 @@ export default function UserProfileClient({ userId }) {
     }
     return result;
   }, [listData?.availableStatuses, profile?.statusCode, profile?.status, statusValue]);
+
+  const planSlugOptions = useMemo(() => {
+    const set = new Set();
+    (listData?.items ?? []).forEach((item) => {
+      const slug = item?.planSlug || item?.planId;
+      const value = typeof slug === "string" ? slug.trim() : "";
+      if (value) set.add(value);
+    });
+    if (profile?.planSlug) set.add(profile.planSlug);
+    if (profile?.planId) set.add(profile.planId);
+    return Array.from(set).sort();
+  }, [listData?.items, profile?.planId, profile?.planSlug]);
 
   const errorMessage = isError ? getErrorMessage(error, "Failed to load user profile.") : null;
 
@@ -440,23 +462,84 @@ export default function UserProfileClient({ userId }) {
                   <Label htmlFor="lastName">Last name</Label>
                   <Input id="lastName" placeholder="Last" disabled={isSaving} {...form.register("lastName")} />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Input id="role" placeholder="user" disabled={isSaving} {...form.register("role")} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="planId">Plan ID</Label>
-                  <Input id="planId" placeholder="basic" disabled={isSaving} {...form.register("planId")} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="subscriptionStatus">Subscription status</Label>
-                  <Input
-                    id="subscriptionStatus"
-                    placeholder="active"
-                    disabled={isSaving}
-                    {...form.register("subscriptionStatus")}
-                  />
-                </div>
+                <Controller
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor="role">Role</Label>
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        disabled={isSaving}
+                      >
+                        <SelectTrigger id="role">
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No role</SelectItem>
+                          {ROLE_OPTIONS.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
+                <Controller
+                  control={form.control}
+                  name="planId"
+                  render={({ field }) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor="planId">Plan Slug</Label>
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        disabled={isSaving || planSlugOptions.length === 0}
+                      >
+                        <SelectTrigger id="planId">
+                          <SelectValue placeholder={planSlugOptions.length ? "Select plan slug" : "No plan slugs"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No plan</SelectItem>
+                          {planSlugOptions.map((slug) => (
+                            <SelectItem key={slug} value={slug}>
+                              {slug}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
+                <Controller
+                  control={form.control}
+                  name="subscriptionStatus"
+                  render={({ field }) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor="subscriptionStatus">Subscription status</Label>
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        disabled={isSaving}
+                      >
+                        <SelectTrigger id="subscriptionStatus">
+                          <SelectValue placeholder="Select subscription status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No status</SelectItem>
+                          {SUBSCRIPTION_STATUS_OPTIONS.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
                 <div className="grid gap-2">
                   <Label htmlFor="profilePictureUrl">Profile picture URL</Label>
                   <Input
