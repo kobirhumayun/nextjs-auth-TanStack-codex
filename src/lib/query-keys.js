@@ -45,7 +45,29 @@ export const qk = {
       }
       return ["admin", "payments", filters];
     },
-    users: () => ["admin", "users"],
+    users: (filters) => {
+      if (!filters || (typeof filters === "object" && Object.keys(filters).length === 0)) {
+        return ["admin", "users"];
+      }
+      if (typeof filters === "string") {
+        return ["admin", "users", filters];
+      }
+      if (typeof filters === "object") {
+        const normalized = Object.keys(filters)
+          .sort()
+          .reduce((acc, key) => {
+            const value = filters[key];
+            if (value === undefined) return acc;
+            acc[key] = value;
+            return acc;
+          }, {});
+        if (Object.keys(normalized).length === 0) {
+          return ["admin", "users"];
+        }
+        return ["admin", "users", normalized];
+      }
+      return ["admin", "users", filters];
+    },
     userProfile: (id) => ["admin", "users", String(id)],
   },
 };

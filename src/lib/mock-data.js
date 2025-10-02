@@ -141,33 +141,6 @@ const adminPayments = [
   { id: "pay-03", user: "strategist", amount: 29, method: "Card", status: "Approved", submittedAt: "2025-01-07" },
 ];
 
-const adminUsers = [
-  {
-    id: "68170801c901776f5f01d330",
-    username: "kobirhumayun",
-    email: "kobirhumayun@gmail.com",
-    plan: "Professional",
-    registeredAt: "2024-03-18",
-    status: "Active",
-  },
-  {
-    id: "681707f8c901776f5f01d32d",
-    username: "growthlead",
-    email: "growthlead@example.com",
-    plan: "Business",
-    registeredAt: "2024-07-22",
-    status: "Invited",
-  },
-  {
-    id: "68170c9ac901776f5f01d37b",
-    username: "analyticspro",
-    email: "analytics@example.com",
-    plan: "Enterprise",
-    registeredAt: "2024-10-05",
-    status: "Active",
-  },
-];
-
 export async function fetchDashboardSummary() {
   await delay();
   return dashboardSummary;
@@ -225,22 +198,3 @@ export async function fetchAdminPayments() {
   return adminPayments;
 }
 
-export async function fetchAdminUsers() {
-  await delay();
-  return adminUsers;
-}
-
-export async function fetchAdminUserProfile(userId) {
-  await delay();
-  return (
-    adminUsers.find((user) => user.id === userId) || {
-      id: userId,
-      username: "unknown",
-      email: "unknown@example.com",
-      plan: "Free",
-      registeredAt: "2024-01-01",
-      status: "Unknown",
-      orders: [],
-    }
-  );
-}

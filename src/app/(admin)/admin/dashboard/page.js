@@ -5,10 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import PageHeader from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fetchAdminUsers } from "@/lib/mock-data";
-import { qk } from "@/lib/query-keys";
 import { adminPlansOptions } from "@/lib/queries/admin-plans";
 import { adminPaymentsOptions } from "@/lib/queries/admin-payments";
+import { adminUsersOptions } from "@/lib/queries/admin-users";
 
 const formatCurrency = (amount, currency) => {
   if (amount == null) return "—";
@@ -49,7 +48,8 @@ export default function AdminDashboardPage() {
   const { data: plans = [] } = useQuery(adminPlansOptions());
   const { data: pendingPaymentsData } = useQuery(adminPaymentsOptions({ status: "pending" }));
   const { data: recentPaymentsData } = useQuery(adminPaymentsOptions());
-  const { data: users = [] } = useQuery({ queryKey: qk.admin.users(), queryFn: fetchAdminUsers });
+  const { data: usersData } = useQuery(adminUsersOptions());
+  const users = usersData?.items ?? [];
 
   const pendingPayments = pendingPaymentsData?.items ?? [];
   const pendingPaymentsCount = pendingPaymentsData?.pagination?.totalItems ?? pendingPayments.length;
@@ -94,7 +94,15 @@ export default function AdminDashboardPage() {
             <CardTitle>Enterprise Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{users.filter((user) => user.plan === "Enterprise").length}</p>
+            <p className="text-3xl font-semibold">
+              {
+                users.filter((user) => {
+                  const slug = user.planSlug?.toLowerCase();
+                  const name = user.planName?.toLowerCase();
+                  return slug === "enterprise" || name?.includes("enterprise");
+                }).length
+              }
+            </p>
             <p className="text-sm text-muted-foreground">Managed by customer success</p>
           </CardContent>
         </Card>
