@@ -190,13 +190,32 @@ export default function UserProfileClient({ userId }) {
     select: (plans) => (Array.isArray(plans) ? plans : []),
   });
 
+  const formValues = useMemo(
+    () =>
+      mapProfileToForm(profile),
+    [
+      profile?.id,
+      profile?.username,
+      profile?.email,
+      profile?.firstName,
+      profile?.lastName,
+      profile?.role,
+      profile?.planId,
+      profile?.planSlug,
+      profile?.profilePictureUrl,
+      profile?.subscriptionStatus,
+      profile?.subscriptionStartDate,
+      profile?.subscriptionEndDate,
+      profile?.trialEndsAt,
+      profile?.isActive,
+    ]
+  );
+
   const form = useForm({ defaultValues: defaultFormValues });
 
   useEffect(() => {
-    if (profile) {
-      form.reset(mapProfileToForm(profile));
-    }
-  }, [form, profile]);
+    form.reset(formValues);
+  }, [form, formValues]);
 
   const [statusValue, setStatusValue] = useState("");
 
