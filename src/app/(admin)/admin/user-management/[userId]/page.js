@@ -7,7 +7,7 @@ import UserProfileClient from "./user-profile-client";
 
 // Server component responsible for prefetching user profile data for hydration.
 export default async function AdminUserProfilePage({ params }) {
-  const userId = params.userId;
+  const { userId } = await params;
   const queryClient = getQueryClient();
 
   await Promise.all([
