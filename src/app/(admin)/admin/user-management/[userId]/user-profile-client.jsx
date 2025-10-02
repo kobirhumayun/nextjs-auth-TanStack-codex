@@ -70,6 +70,34 @@ const getErrorMessage = (err, fallback) => {
   return fallback;
 };
 
+const RESET_REDIRECT_ENV = process.env.NEXT_PUBLIC_PASSWORD_RESET_REDIRECT_URL;
+
+const sanitizeRedirectUri = (value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "https:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const resolvePasswordResetRedirectUri = () => {
+  const envValue = sanitizeRedirectUri(RESET_REDIRECT_ENV);
+  if (envValue) return envValue;
+
+  if (typeof window !== "undefined") {
+    const fallback = sanitizeRedirectUri(
+      `${window.location.origin.replace(/\/$/, "")}/auth/reset-password`
+    );
+    if (fallback) return fallback;
+  }
+
+  return undefined;
+};
+
 const buildUpdatePayload = (values, profile) => {
   const payload = {};
   const trimmedUsername = values.username?.trim();
@@ -329,8 +357,12 @@ export default function UserProfileClient({ userId }) {
   };
 
   const handleResetPassword = () => {
-    const redirectUri =
-      typeof window !== "undefined" ? `${window.location.origin}/auth/reset-password` : undefined;
+    const redirectUri = resolvePasswordResetRedirectUri();
+    if (!redirectUri) {
+      toast.info(
+        "No secure reset redirect configured. The backend default link will be used instead."
+      );
+    }
     resetPasswordMutation.mutate({ userId, redirectUri });
   };
 

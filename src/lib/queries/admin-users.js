@@ -289,11 +289,10 @@ export const updateAdminUserStatus = ({ userId, status }) => {
 
 export const resetAdminUserPassword = ({ userId, redirectUri }) => {
   if (!userId) throw new Error("User ID is required to reset password");
-  const body = {};
-  if (redirectUri) body.redirectUri = redirectUri;
+  const payload = redirectUri ? { redirectUri } : undefined;
   return apiJSON(`${ADMIN_USERS_ENDPOINT}/${userId}/reset-password`, {
     method: "POST",
-    body,
+    ...(payload ? { body: payload } : {}),
   });
 };
 
