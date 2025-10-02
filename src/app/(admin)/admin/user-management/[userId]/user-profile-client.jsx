@@ -25,6 +25,9 @@ import {
 } from "@/lib/queries/admin-users";
 
 const ROLE_OPTIONS = ["user", "admin", "editor", "support"];
+const NO_ROLE_VALUE = "__no_role__";
+const NO_PLAN_VALUE = "__no_plan__";
+const NO_SUBSCRIPTION_STATUS_VALUE = "__no_subscription_status__";
 const SUBSCRIPTION_STATUS_OPTIONS = [
   "active",
   "trialing",
@@ -469,15 +472,17 @@ export default function UserProfileClient({ userId }) {
                     <div className="grid gap-2">
                       <Label htmlFor="role">Role</Label>
                       <Select
-                        value={field.value || ""}
-                        onValueChange={field.onChange}
+                        value={field.value || NO_ROLE_VALUE}
+                        onValueChange={(value) =>
+                          field.onChange(value === NO_ROLE_VALUE ? "" : value)
+                        }
                         disabled={isSaving}
                       >
                         <SelectTrigger id="role">
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No role</SelectItem>
+                          <SelectItem value={NO_ROLE_VALUE}>No role</SelectItem>
                           {ROLE_OPTIONS.map((role) => (
                             <SelectItem key={role} value={role}>
                               {role}
@@ -495,15 +500,21 @@ export default function UserProfileClient({ userId }) {
                     <div className="grid gap-2">
                       <Label htmlFor="planId">Plan Slug</Label>
                       <Select
-                        value={field.value || ""}
-                        onValueChange={field.onChange}
+                        value={field.value || NO_PLAN_VALUE}
+                        onValueChange={(value) =>
+                          field.onChange(value === NO_PLAN_VALUE ? "" : value)
+                        }
                         disabled={isSaving || planSlugOptions.length === 0}
                       >
                         <SelectTrigger id="planId">
-                          <SelectValue placeholder={planSlugOptions.length ? "Select plan slug" : "No plan slugs"} />
+                          <SelectValue
+                            placeholder={
+                              planSlugOptions.length ? "Select plan slug" : "No plan slugs"
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No plan</SelectItem>
+                          <SelectItem value={NO_PLAN_VALUE}>No plan</SelectItem>
                           {planSlugOptions.map((slug) => (
                             <SelectItem key={slug} value={slug}>
                               {slug}
@@ -521,15 +532,17 @@ export default function UserProfileClient({ userId }) {
                     <div className="grid gap-2">
                       <Label htmlFor="subscriptionStatus">Subscription status</Label>
                       <Select
-                        value={field.value || ""}
-                        onValueChange={field.onChange}
+                        value={field.value || NO_SUBSCRIPTION_STATUS_VALUE}
+                        onValueChange={(value) =>
+                          field.onChange(value === NO_SUBSCRIPTION_STATUS_VALUE ? "" : value)
+                        }
                         disabled={isSaving}
                       >
                         <SelectTrigger id="subscriptionStatus">
                           <SelectValue placeholder="Select subscription status" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No status</SelectItem>
+                          <SelectItem value={NO_SUBSCRIPTION_STATUS_VALUE}>No status</SelectItem>
                           {SUBSCRIPTION_STATUS_OPTIONS.map((status) => (
                             <SelectItem key={status} value={status}>
                               {status}
