@@ -186,11 +186,12 @@ export default function CreateUserDialog({ open, onOpenChange }) {
   });
 
   useEffect(() => {
-    if (open) {
-      form.reset(defaultValues);
-      createUserMutation.reset();
-    }
-  }, [open, form, createUserMutation]);
+    if (!open) return;
+
+    form.reset(defaultValues);
+    createUserMutation.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const isSubmitting = createUserMutation.isPending;
 
