@@ -77,7 +77,7 @@ const resolvePlanFieldValue = (profile) => {
 };
 
 const mapProfileToForm = (profile) => {
-  if (!profile) return defaultFormValues;
+  if (!profile) return { ...defaultFormValues };
   const toDateInput = (value) => {
     if (!value) return "";
     const str = String(value);
@@ -204,44 +204,60 @@ const initials = (value) => {
 
 export default function UserProfileClient({ userId }) {
   const queryClient = useQueryClient();
+  const form = useForm({ defaultValues: defaultFormValues });
   const {
-    data: profile,
+    data: profileResult,
     isLoading,
     isError,
     error,
-  } = useQuery(adminUserProfileOptions(userId));
+  } = useQuery({
+    ...adminUserProfileOptions(userId),
+    placeholderData: () => {
+      const cachedProfile = queryClient.getQueryData(
+        qk.admin.userProfile(userId)
+      );
+      if (cachedProfile) return cachedProfile;
+
+      const cachedLists = queryClient.getQueriesData({
+        queryKey: qk.admin.users(),
+        exact: false,
+      });
+
+      for (const [, value] of cachedLists) {
+        const items = Array.isArray(value?.items) ? value.items : [];
+        const match = items.find((item) => item?.id === userId);
+        if (match) {
+          return mergeAdminUser(null, match);
+        }
+      }
+
+      return undefined;
+    },
+    select: (data) => {
+      const profile = data ?? null;
+      return {
+        profile,
+        formValues: profile ? mapProfileToForm(profile) : null,
+      };
+    },
+  });
+  const profile = profileResult?.profile ?? null;
+  const formValues = profileResult?.formValues ?? null;
   const { data: listData } = useQuery(adminUsersOptions());
   const { data: plansData = [] } = useQuery({
     ...adminPlansOptions(),
     select: (plans) => (Array.isArray(plans) ? plans : []),
   });
 
-  const formValues = useMemo(
-    () =>
-      mapProfileToForm(profile),
-    [
-      profile?.id,
-      profile?.username,
-      profile?.email,
-      profile?.firstName,
-      profile?.lastName,
-      profile?.role,
-      profile?.planId,
-      profile?.planSlug,
-      profile?.profilePictureUrl,
-      profile?.subscriptionStatus,
-      profile?.subscriptionStartDate,
-      profile?.subscriptionEndDate,
-      profile?.trialEndsAt,
-      profile?.isActive,
-    ]
-  );
-
-  const form = useForm({ defaultValues: defaultFormValues });
-
   useEffect(() => {
+    if (!profile || !formValues) return;
+    const currentValues = form.getValues();
+    const needsReset = Object.keys(formValues).some(
+      (key) => currentValues[key] !== formValues[key]
+    );
+    if (!needsReset) return;
     form.reset(formValues);
-  }, [form, formValues]);
+  }, [form, formValues, profile]);
 
   const [statusValue, setStatusValue] = useState("");
 
