@@ -81,7 +81,8 @@ const normalizeStatusValue = (value) => {
 const getAccountStatusLabel = (value) => {
   const normalized = normalizeStatusValue(value);
   const match = ACCOUNT_STATUS_OPTIONS.find((option) => option.value === normalized);
-  return match?.label ?? formatAdminUserStatus(normalized) ?? normalized || "";
+  const label = match?.label ?? formatAdminUserStatus(normalized) ?? normalized;
+  return label || "";
 };
 
 const resolvePlanFieldValue = (profile) => {
