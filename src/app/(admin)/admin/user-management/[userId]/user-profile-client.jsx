@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import PageHeader from "@/components/shared/page-header";
@@ -83,17 +83,6 @@ const getAccountStatusLabel = (value) => {
   const match = ACCOUNT_STATUS_OPTIONS.find((option) => option.value === normalized);
   const label = match?.label ?? formatAdminUserStatus(normalized) ?? normalized;
   return label || "";
-};
-
-const buildProfileHydrationKey = (profile) => {
-  if (!profile) return null;
-  const parts = [
-    profile.id ?? "",
-    profile.role ?? "",
-    profile.planSlug ?? profile.planId ?? "",
-    profile.subscriptionStatus ?? "",
-  ];
-  return parts.join("|");
 };
 
 const resolvePlanFieldValue = (profile) => {
@@ -236,7 +225,6 @@ export default function UserProfileClient({ userId }) {
   const queryClient = useQueryClient();
   const form = useForm({ defaultValues: defaultFormValues });
   const { isDirty } = form.formState;
-  const lastHydratedProfileKeyRef = useRef(null);
   const {
     data: profileResult,
     isLoading,
@@ -275,10 +263,6 @@ export default function UserProfileClient({ userId }) {
   });
   const profile = profileResult?.profile ?? null;
   const formValues = profileResult?.formValues ?? null;
-  const profileHydrationKey = useMemo(
-    () => buildProfileHydrationKey(profile),
-    [profile?.id, profile?.planId, profile?.planSlug, profile?.role, profile?.subscriptionStatus]
-  );
   const { data: listData } = useQuery(adminUsersOptions());
   const { data: plansData = [] } = useQuery({
     ...adminPlansOptions(),
@@ -286,20 +270,48 @@ export default function UserProfileClient({ userId }) {
   });
 
   useEffect(() => {
-    if (!profile || !formValues || !profileHydrationKey) {
+    if (!profile || !formValues) {
       if (!profile && !isDirty) {
         form.reset(defaultFormValues);
-        lastHydratedProfileKeyRef.current = null;
       }
       return;
     }
 
-    if (isDirty) return;
-    if (lastHydratedProfileKeyRef.current === profileHydrationKey) return;
+    if (isDirty) {
+      return;
+    }
 
-    form.reset(formValues);
-    lastHydratedProfileKeyRef.current = profileHydrationKey;
-  }, [form, formValues, profile, profileHydrationKey, isDirty]);
+    const currentValues = form.getValues();
+    const keysToCompare = [
+      "username",
+      "email",
+      "firstName",
+      "lastName",
+      "role",
+      "planId",
+      "profilePictureUrl",
+      "subscriptionStatus",
+      "subscriptionStartDate",
+      "subscriptionEndDate",
+      "trialEndsAt",
+      "isActive",
+    ];
+
+    const hasDifference = keysToCompare.some((key) => {
+      const current = currentValues[key];
+      const next = formValues[key];
+
+      if (key === "isActive") {
+        return Boolean(current) !== Boolean(next);
+      }
+
+      return (current ?? "") !== (next ?? "");
+    });
+
+    if (hasDifference) {
+      form.reset(formValues);
+    }
+  }, [form, formValues, isDirty, profile]);
 
   const [statusValue, setStatusValue] = useState("");
 
@@ -418,7 +430,6 @@ export default function UserProfileClient({ userId }) {
       });
 
       form.reset(mapProfileToForm(nextProfile));
-      lastHydratedProfileKeyRef.current = buildProfileHydrationKey(nextProfile);
       toast.success("Profile updated successfully.");
     },
     onSettled: (_data, _error, variables) => {
