@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import PageHeader from "@/components/shared/page-header";
@@ -224,7 +224,7 @@ const initials = (value) => {
 export default function UserProfileClient({ userId }) {
   const queryClient = useQueryClient();
   const form = useForm({ defaultValues: defaultFormValues });
-  const { isDirty } = form.formState;
+  const hydrationSignatureRef = useRef(null);
   const {
     data: profileResult,
     isLoading,
@@ -271,47 +271,21 @@ export default function UserProfileClient({ userId }) {
 
   useEffect(() => {
     if (!profile || !formValues) {
-      if (!profile && !isDirty) {
+      if (!profile && hydrationSignatureRef.current !== "__default__") {
         form.reset(defaultFormValues);
+        hydrationSignatureRef.current = "__default__";
       }
       return;
     }
 
-    if (isDirty) {
+    const signature = JSON.stringify(formValues);
+    if (hydrationSignatureRef.current === signature) {
       return;
     }
 
-    const currentValues = form.getValues();
-    const keysToCompare = [
-      "username",
-      "email",
-      "firstName",
-      "lastName",
-      "role",
-      "planId",
-      "profilePictureUrl",
-      "subscriptionStatus",
-      "subscriptionStartDate",
-      "subscriptionEndDate",
-      "trialEndsAt",
-      "isActive",
-    ];
-
-    const hasDifference = keysToCompare.some((key) => {
-      const current = currentValues[key];
-      const next = formValues[key];
-
-      if (key === "isActive") {
-        return Boolean(current) !== Boolean(next);
-      }
-
-      return (current ?? "") !== (next ?? "");
-    });
-
-    if (hasDifference) {
-      form.reset(formValues);
-    }
-  }, [form, formValues, isDirty, profile]);
+    form.reset(formValues);
+    hydrationSignatureRef.current = signature;
+  }, [form, formValues, profile]);
 
   const [statusValue, setStatusValue] = useState("");
 
