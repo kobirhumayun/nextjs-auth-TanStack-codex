@@ -34,6 +34,12 @@ const SUBSCRIPTION_STATUS_OPTIONS = [
   "pending",
   "free",
 ];
+const ACCOUNT_STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "invited", label: "Invited" },
+  { value: "suspended", label: "Suspended" },
+  { value: "disabled", label: "Disabled" },
+];
 
 const toSelectValue = (value) => {
   if (value == null) return undefined;
@@ -64,6 +70,18 @@ const matchSelectOption = (value, options) => {
   const lower = trimmed.toLowerCase();
   const matched = options.find((option) => option.toLowerCase() === lower);
   return matched ?? trimmed;
+};
+
+const normalizeStatusValue = (value) => {
+  if (!value) return "";
+  const normalized = String(value).trim().toLowerCase();
+  return normalized;
+};
+
+const getAccountStatusLabel = (value) => {
+  const normalized = normalizeStatusValue(value);
+  const match = ACCOUNT_STATUS_OPTIONS.find((option) => option.value === normalized);
+  return match?.label ?? formatAdminUserStatus(normalized) ?? normalized || "";
 };
 
 const resolvePlanFieldValue = (profile) => {
@@ -266,25 +284,21 @@ export default function UserProfileClient({ userId }) {
       setStatusValue("");
       return;
     }
-    const nextStatus = profile.statusCode || (profile.status ? String(profile.status).toLowerCase() : "");
-    setStatusValue(nextStatus || "");
+    const nextStatus = normalizeStatusValue(profile.statusCode || profile.status);
+    setStatusValue(nextStatus);
   }, [profile?.statusCode, profile?.status]);
 
-  const statusOptions = useMemo(() => {
-    const set = new Set();
-    (listData?.availableStatuses ?? []).forEach((status) => {
-      if (!status) return;
-      const str = String(status).trim().toLowerCase();
-      if (str) set.add(str);
-    });
-    if (profile?.statusCode) set.add(String(profile.statusCode).trim().toLowerCase());
-    if (profile?.status) set.add(String(profile.status).trim().toLowerCase());
-    const result = Array.from(set);
-    if (result.length === 0 && statusValue) {
-      result.push(statusValue);
+  const accountStatusOptions = useMemo(() => {
+    const normalizedCurrent = normalizeStatusValue(profile?.statusCode || profile?.status);
+    const base = [...ACCOUNT_STATUS_OPTIONS];
+    if (normalizedCurrent && !base.some((option) => option.value === normalizedCurrent)) {
+      base.push({
+        value: normalizedCurrent,
+        label: getAccountStatusLabel(normalizedCurrent),
+      });
     }
-    return result;
-  }, [listData?.availableStatuses, profile?.statusCode, profile?.status, statusValue]);
+    return base;
+  }, [profile?.statusCode, profile?.status]);
 
   const planSlugOptions = useMemo(() => {
     const set = new Set();
@@ -424,7 +438,8 @@ export default function UserProfileClient({ userId }) {
     },
     onSuccess: (response, variables, context) => {
       const resolvedStatus = (response?.statusCode ?? response?.status ?? variables.status) || "";
-      const normalizedStatus = String(resolvedStatus).trim().toLowerCase();
+      const normalizedStatus = normalizeStatusValue(resolvedStatus);
+      const displayStatusLabel = getAccountStatusLabel(normalizedStatus);
       const patch = { statusCode: normalizedStatus, status: normalizedStatus };
 
       const nextProfile = mergeAdminUser(
@@ -445,7 +460,9 @@ export default function UserProfileClient({ userId }) {
       });
 
       setStatusValue(normalizedStatus);
-      toast.success(`Status updated to ${formatAdminUserStatus(normalizedStatus) || normalizedStatus}.`);
+      toast.success(
+        `Status updated to ${displayStatusLabel || formatAdminUserStatus(normalizedStatus) || normalizedStatus}.`
+      );
     },
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: qk.admin.userProfile(variables.userId) });
@@ -771,17 +788,17 @@ export default function UserProfileClient({ userId }) {
               <div className="space-y-2">
                 <Label htmlFor="status-select">Status</Label>
                 <Select
-                  value={statusValue}
+                  value={statusValue || undefined}
                   onValueChange={setStatusValue}
-                  disabled={isUpdatingStatus || statusOptions.length === 0}
+                  disabled={isUpdatingStatus || accountStatusOptions.length === 0}
                 >
                   <SelectTrigger id="status-select">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {formatAdminUserStatus(status) || status}
+                    {accountStatusOptions.map((statusOption) => (
+                      <SelectItem key={statusOption.value} value={statusOption.value}>
+                        {statusOption.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -793,7 +810,10 @@ export default function UserProfileClient({ userId }) {
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
-                  onClick={() => statusValue && updateStatusMutation.mutate({ userId, status: statusValue })}
+                  onClick={() =>
+                    statusValue &&
+                    updateStatusMutation.mutate({ userId, status: statusValue })
+                  }
                   disabled={!statusValue || isUpdatingStatus}
                   className="w-full sm:w-auto"
                 >
@@ -803,7 +823,9 @@ export default function UserProfileClient({ userId }) {
                   type="button"
                   variant="outline"
                   onClick={() =>
-                    setStatusValue(profile?.statusCode || (profile?.status ? String(profile.status).toLowerCase() : ""))
+                    setStatusValue(
+                      normalizeStatusValue(profile?.statusCode || profile?.status)
+                    )
                   }
                   disabled={isUpdatingStatus || !profile}
                   className="w-full sm:w-auto"
