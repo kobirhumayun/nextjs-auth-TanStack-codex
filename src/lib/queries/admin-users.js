@@ -278,6 +278,16 @@ export const updateAdminUser = ({ userId, updates }) => {
   });
 };
 
+export const createAdminUser = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Create payload is required");
+  }
+  return apiJSON(ADMIN_USERS_ENDPOINT, {
+    method: "POST",
+    body: payload,
+  });
+};
+
 export const updateAdminUserStatus = ({ userId, status }) => {
   if (!userId) throw new Error("User ID is required for status update");
   if (!status) throw new Error("Status value is required");

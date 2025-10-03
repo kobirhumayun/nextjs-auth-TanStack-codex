@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import PageHeader from "@/components/shared/page-header";
 import UserTable from "@/components/features/admin/user-table";
+import CreateUserDialog from "@/components/features/admin/create-user-dialog";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { adminUsersOptions, formatAdminUserStatus } from "@/lib/queries/admin-users";
@@ -22,6 +24,7 @@ const getErrorMessage = (err, fallback) => {
 export default function AdminUserManagementPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery(
     adminUsersOptions(statusFilter === "all" ? {} : { status: statusFilter })
@@ -45,7 +48,11 @@ export default function AdminUserManagementPage() {
       <PageHeader
         title="User management"
         description="Search, filter, and inspect customer accounts."
+        actions={
+          <Button onClick={() => setIsCreateOpen(true)}>Create user</Button>
+        }
       />
+      <CreateUserDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
       <Card>
         <CardContent className="space-y-6 pt-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
